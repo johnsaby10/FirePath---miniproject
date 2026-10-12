@@ -1,0 +1,100 @@
+import { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LearnModal } from './LearnModal';
+
+export const SIPCalculator = () => {
+    const [isLearnModalOpen, setIsLearnModalOpen] = useState(false);
+    const [monthlyInvestment, setMonthlyInvestment] = useState<number | ''>(10000);
+    const [expectedReturn, setExpectedReturn] = useState<number | ''>(12);
+    const [duration, setDuration] = useState<number | ''>(10); // in years
+
+    const [chartData, setChartData] = useState<Array<{ year: number; totalInvestment: number; totalValue: number }>>([]);
+
+    useEffect(() => {
+        const data: Array<{ year: number; totalInvestment: number; totalValue: number }> = [];
+        let totalValue = 0;
+        const monthlyReturnRate = (Number(expectedReturn) || 0) / 12 / 100;
+
+        for (let year = 1; year <= (Number(duration) || 0); year++) {
+            for (let month = 1; month <= 12; month++) {
+                totalValue = (totalValue + (Number(monthlyInvestment) || 0)) * (1 + monthlyReturnRate);
+            }
+            data.push({
+                year: year,
+                totalInvestment: (Number(monthlyInvestment) || 0) * 12 * year,
+                totalValue: Math.round(totalValue),
+            });
+        }
+        setChartData(data);
+    }, [monthlyInvestment, expectedReturn, duration]);
+
+    const totalInvestment = (Number(monthlyInvestment) || 0) * 12 * (Number(duration) || 0);
+    const totalValue = chartData.length > 0 ? chartData[chartData.length - 1].totalValue : 0;
+    const wealthGained = totalValue - totalInvestment;
+
+    return (
+        <>
+            <LearnModal
+                isOpen={isLearnModalOpen}
+                onClose={() => setIsLearnModalOpen(false)}
+                title="What is a SIP?"
+                content="A Systematic Investment Plan (SIP) is a way to invest a fixed amount of money in mutual funds at regular intervals (usually monthly). It's a disciplined approach to investing that helps you average out the cost of your investment over time and benefit from the power of compounding. By investing regularly, you buy more units when the market is low and fewer units when it's high, which can lead to better returns in the long run."
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Input Controls */}
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">SIP Inputs</h2>
+                        <button onClick={() => setIsLearnModalOpen(true)} className="font-bold text-emerald-600 hover:underline">Learn</button>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Investment (₹)</label>
+                        <input type="number" value={monthlyInvestment} onChange={(e) => setMonthlyInvestment(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Annual Return (%)</label>
+                        <input type="number" value={expectedReturn} onChange={(e) => setExpectedReturn(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Investment Duration (Years)</label>
+                        <input type="number" value={duration} onChange={(e) => setDuration(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+                    </div>
+                </div>
+
+                {/* Chart and Summary */}
+                <div className="lg:col-span-2 space-y-8">
+                    <div>
+                        <h3 className="text-2xl font-bold text-center text-gray-800 dark:text-white">Your SIP Projection</h3>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 mt-4 h-[400px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis dataKey="year" label={{ value: 'Year', position: 'insideBottomRight', offset: -5 }} />
+                                    <YAxis tickFormatter={(value) => `₹${value.toLocaleString('en-IN')}`} width={90} />
+                                    <Tooltip formatter={(value) => `₹${(value as number).toLocaleString('en-IN')}`} labelFormatter={(label) => `Year ${label}`} />
+                                    <Line type="monotone" dataKey="totalValue" stroke="#059669" strokeWidth={3} dot={false} name="Total Value" />
+                                    <Line type="monotone" dataKey="totalInvestment" stroke="#d97706" strokeDasharray="5 5" strokeWidth={2} dot={false} name="Total Investment" />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                        <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                            <p className="text-sm text-blue-800 dark:text-blue-300 font-semibold uppercase">Total Invested</p>
+                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">₹{totalInvestment.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="bg-emerald-50 dark:bg-emerald-900/30 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50">
+                            <p className="text-sm text-emerald-800 dark:text-emerald-300 font-semibold uppercase">Wealth Gained</p>
+                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">₹{wealthGained.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-xl border border-purple-100 dark:border-purple-800/50">
+                            <p className="text-sm text-purple-800 dark:text-purple-300 font-semibold uppercase">Total Value</p>
+                            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">₹{totalValue.toLocaleString('en-IN')}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+};
